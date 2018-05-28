@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+<script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+<script type="text/javascript" src="sjcl.js"></script>
+<script src="js/materialize.js"></script>
+<script src="js/init.js"></script>
+<script src="js/functions.js"></script>
+<script>
+	var username = sessionStorage.getItem('username');
+	var chatroom = sessionStorage.getItem('chatroom');
+	var pwd = sessionStorage.getItem('password');
+	var socket = io();
+	socket.emit('handshake', username, chatroom);
+	function removeClient() {
+		socket.emit('remove', username, chatroom);
+	}
+
+	// Set chatname in title
+	var url = window.location.href;
+	var captured = /name=([^&]+)/.exec(url)[1]; // Value is in [1]
+	document.title = captured;
+
+	// send
+	function chatFormSend() {
+		var content = $('#message').val();
+		// prevent js scripting hacks
+		content = content.replace('<', '');
+		content = content.replace('>', '');
+
+		// parse \list command
+		if (content == '\\list') {
+			socket.emit('list', chatroom);
+		} else if (content == '\\sec') {
+			socket.emit('security');
+		} else if (content == "\\robot") {
+			robotLoop();
+		} else {
+			content = sjcl.encrypt(pwd, content);
+			socket.emit('chat message', content, username, chatroom);
+		}
+		$('#message').val('');
+	}
+
+	//apend message
+	socket
+			.on(
+					'chat message',
+					function(msg, time, user) {
+						msg = sjcl.decrypt(pwd, msg);
+						$('#messages')
+								.append(
+										$("<li class='collection-item avatar'>"
+												+ "<i class='material-icons circle red'>perm_identity</i>"
+												+ "<span class='title'>" + user
+												+ "<i class='timestamp''>"
+												+ time + "</i></span>" + "<p>"
+												+ msg + "</li>"));
+
+						$(document).scrollTop($(document).height());
+					});
+
+	//apend info messages like list of users
+	socket
+			.on(
+					'info',
+					function(msg, time, user) {
+						$('#messages')
+								.append(
+										$("<li class='collection-item avatar'>"
+												+ "<i class='material-icons circle blue'>label_outline</i>"
+												+ "<p>" + msg + "<p></li>"));
+
+						$(document).scrollTop($(document).height());
+					});
+
+	//set the title to the chatname
+	socket.on('chatname', function(chatname) {
+		document.title = 'Chatroom: ' + chatname;
+	});
+
+	//append advertisement
+	socket
+			.on(
+					'advertisement',
+					function(msg, time) {
+						$('#messages')
+								.append(
+										$("<li class='collection-item avatar'>"
+												+ "<i class='material-icons circle yellow'>info_outline</i> <span class='title'>"
+												+ "Advertisement</span>"
+												+ "<p>" + msg + "</li>"));
+
+						$(document).scrollTop($(document).height());
+					});
+	var count = 0;
+	function robotLoop() {
+		if (document.getElementById("message").value == 's') {
+			return;
+		}
+		document.getElementById("message").value = count++;
+		document.getElementById("sendButton").click();
+		setTimeout(robotLoop, 1);
+	}
+</script>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport"
+	content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no" />
+<title>WeChat</title>
+
+<!-- CSS  -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection" />
+<link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection" />
+</head>
+<body onunload="removeClient();">
+	<div class="container">
+		<div class="section">
+			<div class="row bottomPadding">
+				<div class="col s12 ">
+					<!--  chat messages -->
+					<ul class="collection" id="messages"></ul>
+					<!-- /chat messages -->
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+<footer>
+	<div id="footer">
+		<div class="container inputDevider">
+			<div class="section">
+				<div class="row bottomPadding">
+					<!-- /chat -->
+					<!-- input -->
+					<form class="col s12" id="chatForm" action="javascript:chatFormSend();"
+						onsubmit="chatFormSend();return false;">
+						<div class="row">
+							<div class="textarea">
+								<input id="message" class="materialize-textarea messageInput" autocomplete="off" />
+							</div>
+							<div class="sendMessage">
+								<button class="btn-floating btn-large waves-effect waves-light" type="submit" name="action"
+									id="sendButton">
+									<i class="material-icons right">send</i>
+								</button>
+							</div>
+						</div>
+					</form>
+					<!-- /input  -->
+				</div>
+			</div>
+		</div>
+	</div>
+</footer>
+</html>
