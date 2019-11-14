@@ -1,4 +1,6 @@
 applications:
-- name: DemoChat
-  memory: 256M
-  instances: 1
+ - name: elastic-galileo
+   memory: 256M
+   host: elastic-galileo
+   buildpack: staticfile_buildpack
+ 
