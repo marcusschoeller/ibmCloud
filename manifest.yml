@@ -1,6 +1,5 @@
 applications:
- - name: elastic-galileo
-   memory: 256M
-   host: elastic-galileo
-   buildpack: staticfile_buildpack
+- name: infallible-mccarthy
+  memory: 512M
+  instances: 1
  
